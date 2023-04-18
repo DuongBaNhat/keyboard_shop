@@ -3,7 +3,7 @@ package com.nhat.keyboard_shop.config.oauth;
 import com.nhat.keyboard_shop.domain.entity.AppRole;
 import com.nhat.keyboard_shop.domain.entity.Customer;
 import com.nhat.keyboard_shop.domain.entity.UserRole;
-import com.nhat.keyboard_shop.domain.AuthenticationProvider;
+import com.nhat.keyboard_shop.domain.util.AuthenticationProvider;
 import com.nhat.keyboard_shop.repository.AppRoleRepository;
 import com.nhat.keyboard_shop.repository.CustomerRepository;
 import com.nhat.keyboard_shop.repository.UserRoleRepository;
@@ -50,7 +50,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             c.setPassword(bCryptPasswordEncoder.encode("123@ABCxyzalualua"));
             c.setAddress("Chưa có");
             c.setPhone("");
-            c.setAuthProvider(AuthenticationProvider.FAECBOOK);
+            c.setAuthProvider(AuthenticationProvider.FACEBOOK);
             customerRepository.save(c);
             Optional<AppRole> a = appRoleRepository.findById(2L);
             UserRole urole = new UserRole(0L, c, a.get());

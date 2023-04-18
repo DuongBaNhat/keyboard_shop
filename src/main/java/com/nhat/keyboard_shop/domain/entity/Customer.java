@@ -1,6 +1,6 @@
 package com.nhat.keyboard_shop.domain.entity;
 
-import com.nhat.keyboard_shop.domain.AuthenticationProvider;
+import com.nhat.keyboard_shop.domain.util.AuthenticationProvider;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

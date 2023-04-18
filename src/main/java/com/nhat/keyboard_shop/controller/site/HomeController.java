@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
@@ -39,6 +40,12 @@ public class HomeController {
     @Autowired
     CategoryRepository categoryRepository;
 
+    /**
+     * All page
+     * @param model
+     * @param principal
+     * @return
+     */
     @RequestMapping(value = {"/home", "/"})
     public ModelAndView home(ModelMap model, Principal principal) {
         System.out.println("HomeController.home");
@@ -76,6 +83,16 @@ public class HomeController {
         return new ModelAndView("site/index", model);
     }
 
+    /**
+     * Page filter
+     * @param model
+     * @param page
+     * @param name
+     * @param filter
+     * @param brand
+     * @param principal
+     * @return
+     */
     @RequestMapping("/home/page")
     public ModelAndView page(ModelMap model, @RequestParam("page") Optional<Integer> page,
                              @RequestParam("name") String name, @RequestParam("filter") Optional<Integer> filter,
@@ -160,5 +177,95 @@ public class HomeController {
         return new ModelAndView("/site/index", model);
     }
 
+    /**
+     * Brand filter
+     * @param model
+     * @param categoryId
+     * @param principal
+     * @return
+     */
+    @RequestMapping("/home/brand/{id}")
+    public ModelAndView brand(ModelMap model, @PathVariable("id") Long categoryId, Principal principal) {
+        boolean isLogin = false;
+        if (principal != null) {
+            System.out.println(principal.getName());
+            isLogin = true;
+        }
+        model.addAttribute("isLogin", isLogin);
+
+        if (principal != null) {
+            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
+            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
+            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
+                return new ModelAndView("forward:/admin/customers", model);
+            }
+        }
+
+        Page<Product> listP = productRepository.findAllProductByCategoryId(categoryId, PageRequest.of(0, 6));
+
+        System.out.println(listP.getTotalElements());
+        int totalPage = listP.getTotalPages();
+        if (totalPage > 0) {
+            int start = 1;
+            int end = Math.min(2, totalPage);
+            List<Integer> pageNumbers = IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
+            model.addAttribute("pageNumbers", pageNumbers);
+        }
+        model.addAttribute("totalCartItems", shoppingCartService.getCount());
+        List<Category> listC = categoryRepository.findAll();
+        model.addAttribute("categories", listC);
+        model.addAttribute("brand", categoryId);
+        model.addAttribute("products", listP);
+        model.addAttribute("slide", true);
+        return new ModelAndView("/site/index", model);
+    }
+
+    /**
+     * Item filter
+     * @param model
+     * @param id
+     * @param principal
+     * @return
+     */
+    @RequestMapping("/home/item/{id}")
+    public ModelAndView item(ModelMap model, @PathVariable("id") Long id, Principal principal) {
+
+        boolean isLogin = false;
+        if (principal != null) {
+            System.out.println(principal.getName());
+            isLogin = true;
+        }
+        model.addAttribute("isLogin", isLogin);
+
+        if (principal != null) {
+            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
+            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
+            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
+                return new ModelAndView("forward:/admin/customers", model);
+            }
+        }
+
+        Optional<Product> p = productRepository.findById(id);
+
+        // random item product
+        Long quantity = productRepository.count();
+        int index = (int) (Math.random() * (quantity / 6));
+        if (index > quantity - 6) {
+            index -= 6;
+        }
+        Page<Product> productSuggest = productRepository.findAll(PageRequest.of(index, 6));
+        if (p.isPresent()) {
+            model.addAttribute("product", p.get());
+            model.addAttribute("productSuggest", productSuggest);
+            List<Category> listC = categoryRepository.findAll();
+            model.addAttribute("categories", listC);
+            model.addAttribute("totalCartItems", shoppingCartService.getCount());
+            return new ModelAndView("/site/item", model);
+        } else {
+            model.addAttribute("message", "Sản phẩm đã bị xoá !");
+        }
+        model.addAttribute("totalCartItems", shoppingCartService.getCount());
+        return new ModelAndView("forward:/home", model);
+    }
 
 }
