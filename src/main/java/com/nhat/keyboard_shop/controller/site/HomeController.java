@@ -9,6 +9,7 @@ import com.nhat.keyboard_shop.repository.CustomerRepository;
 import com.nhat.keyboard_shop.repository.ProductRepository;
 import com.nhat.keyboard_shop.repository.UserRoleRepository;
 import com.nhat.keyboard_shop.service.ShoppingCartService;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -55,13 +56,9 @@ public class HomeController {
         }
         model.addAttribute("isLogin", isLogin);
 
-        if(principal!=null) {
-            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
-            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
-            if(uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
-                return new ModelAndView("forward:/admin/customers", model);
-            }
-        }
+        ModelAndView modelAdmin = getModelAndView(model, principal);
+        if (modelAdmin != null) return modelAdmin;
+
         System.out.println("HomeController.home");
         Page<Product> listP = productRepository.findAll(PageRequest.of(0, 6));
         int totalPage = listP.getTotalPages();
@@ -105,13 +102,8 @@ public class HomeController {
         }
         model.addAttribute("isLogin", isLogin);
 
-        if (principal != null) {
-            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
-            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
-            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
-                return new ModelAndView("forward:/admin/customers", model);
-            }
-        }
+        ModelAndView modelAdmin = getModelAndView(model, principal);
+        if (modelAdmin != null) return modelAdmin;
 
         int currentPage = page.orElse(0);
         int filterPage = filter.orElse(0);
@@ -193,13 +185,8 @@ public class HomeController {
         }
         model.addAttribute("isLogin", isLogin);
 
-        if (principal != null) {
-            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
-            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
-            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
-                return new ModelAndView("forward:/admin/customers", model);
-            }
-        }
+        ModelAndView modelAdmin = getModelAndView(model, principal);
+        if (modelAdmin != null) return modelAdmin;
 
         Page<Product> listP = productRepository.findAllProductByCategoryId(categoryId, PageRequest.of(0, 6));
 
@@ -237,13 +224,8 @@ public class HomeController {
         }
         model.addAttribute("isLogin", isLogin);
 
-        if (principal != null) {
-            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
-            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
-            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
-                return new ModelAndView("forward:/admin/customers", model);
-            }
-        }
+        ModelAndView modelAdmin = getModelAndView(model, principal);
+        if (modelAdmin != null) return modelAdmin;
 
         Optional<Product> p = productRepository.findById(id);
 
@@ -267,5 +249,90 @@ public class HomeController {
         model.addAttribute("totalCartItems", shoppingCartService.getCount());
         return new ModelAndView("forward:/home", model);
     }
+
+    /**
+     * Search filter
+     * @param model
+     * @param name
+     * @param filter
+     * @param principal
+     * @return
+     */
+    @RequestMapping("/home/search")
+    public ModelAndView search(ModelMap model, @RequestParam("name") String name,
+                               @RequestParam("filter") Optional<Integer> filter, Principal principal) {
+
+        boolean isLogin = false;
+        if (principal != null) {
+            System.out.println(principal.getName());
+            isLogin = true;
+        }
+        model.addAttribute("isLogin", isLogin);
+
+        ModelAndView modelAdmin = getModelAndView(model, principal);
+        if (modelAdmin != null) return modelAdmin;
+
+        int filterPage = filter.orElse(0);
+        Pageable pageable = PageRequest.of(0, 6);
+
+        if (filterPage == 0) {
+            pageable = PageRequest.of(0, 6);
+        } else if (filterPage == 1) {
+            pageable = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, "enteredDate"));
+        } else if (filterPage == 2) {
+            pageable = PageRequest.of(0, 6, Sort.by(Sort.Direction.ASC, "enteredDate"));
+        } else if (filterPage == 3) {
+            pageable = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, "unitPrice"));
+        } else if (filterPage == 4) {
+            pageable = PageRequest.of(0, 6, Sort.by(Sort.Direction.ASC, "unitPrice"));
+        }
+        Page<Product> listP = productRepository.findByNameContaining(name, pageable);
+
+        int totalPage = listP.getTotalPages();
+        if (totalPage > 0) {
+            int start = 1;
+            int end = Math.min(2, totalPage);
+            List<Integer> pageNumbers = IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
+            model.addAttribute("pageNumbers", pageNumbers);
+        }
+        model.addAttribute("totalCartItems", shoppingCartService.getCount());
+
+        List<Category> listC = categoryRepository.findAll();
+
+        setModel(model, name, filterPage, listP, listC);
+        return new ModelAndView("/site/index", model);
+    }
+
+
+    //*****************PRIVATE METHOD*********************//
+
+    /**
+     * Set Model Attribute
+     * @param model
+     * @param name
+     * @param filterPage
+     * @param listP
+     * @param listC
+     */
+    private void setModel(ModelMap model, String name, int filterPage, Page<Product> listP, List<Category> listC) {
+        model.addAttribute("name", name);
+        model.addAttribute("categories", listC);
+        model.addAttribute("filter", filterPage);
+        model.addAttribute("products", listP);
+        model.addAttribute("slide", true);
+    }
+    @Nullable
+    private ModelAndView getModelAndView(ModelMap model, Principal principal) {
+        if (principal != null) {
+            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
+            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
+            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
+                return new ModelAndView("forward:/admin/customers", model);
+            }
+        }
+        return null;
+    }
+
+
 
 }
