@@ -59,7 +59,6 @@ public class HomeController {
         ModelAndView modelAdmin = getModelAndView(model, principal);
         if (modelAdmin != null) return modelAdmin;
 
-        System.out.println("HomeController.home");
         Page<Product> listP = productRepository.findAll(PageRequest.of(0, 6));
         int totalPage = listP.getTotalPages();
         if (totalPage > 0) {
@@ -74,8 +73,6 @@ public class HomeController {
         model.addAttribute("categories", listC);
         model.addAttribute("products", listP);
         model.addAttribute("slide", true);
-
-        System.out.println("listP = " + listP.getSize());
 
         return new ModelAndView("site/index", model);
     }

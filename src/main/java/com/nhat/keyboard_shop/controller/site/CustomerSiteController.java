@@ -1,25 +1,36 @@
 package com.nhat.keyboard_shop.controller.site;
 
-import com.nhat.keyboard_shop.domain.entity.AppRole;
-import com.nhat.keyboard_shop.domain.entity.Customer;
-import com.nhat.keyboard_shop.domain.entity.UserRole;
+import com.nhat.keyboard_shop.domain.entity.*;
+import com.nhat.keyboard_shop.domain.util.CartItem;
 import com.nhat.keyboard_shop.model.dto.ChangePassword;
 import com.nhat.keyboard_shop.model.dto.CustomerDto;
-import com.nhat.keyboard_shop.repository.AppRoleRepository;
-import com.nhat.keyboard_shop.repository.CustomerRepository;
-import com.nhat.keyboard_shop.repository.UserRoleRepository;
+import com.nhat.keyboard_shop.repository.*;
 import com.nhat.keyboard_shop.service.SendMailService;
+import com.nhat.keyboard_shop.service.ShoppingCartService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.Principal;
+import java.text.DecimalFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +49,14 @@ public class CustomerSiteController {
     AppRoleRepository appRoleRepository;
     @Autowired
     UserRoleRepository userRoleRepository;
+    @Autowired
+    ShoppingCartService shoppingCartService;
+    @Autowired
+    OrderRepository orderRepository;
+    @Autowired
+    ProductRepository productRepository;
+    @Autowired
+    OrderDetailRepository orderDetailRepository;
 
     //******LOGIN - LOGOUT*******//
     @GetMapping("/login")
@@ -184,6 +203,137 @@ public class CustomerSiteController {
         return new ModelAndView("/site/changePassword", model);
     }
 
+    //******CHANGE CUSTOMER INFORMATION*******//
+    @GetMapping("/customer/editProfile")
+    public ModelAndView editForm(ModelMap model, Principal principal) {
+
+        boolean isLogin = false;
+        if (principal != null) {
+            System.out.println(principal.getName());
+            isLogin = true;
+        }
+        model.addAttribute("isLogin", isLogin);
+
+        if (principal != null) {
+            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
+            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
+            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
+                return new ModelAndView("forward:/admin/customers", model);
+            }
+        }
+
+        model.addAttribute("customer", customerRepository.FindByEmail(principal.getName()).get());
+
+        model.addAttribute("totalCartItems", shoppingCartService.getCount());
+        return new ModelAndView("/site/editProfile");
+    }
+
+    @PostMapping("/customer/editProfile")
+    public ModelAndView edit(ModelMap model, @Valid @ModelAttribute("customer") CustomerDto dto, BindingResult result,
+                             @RequestParam("photo") MultipartFile photo, Principal principal) throws IOException {
+        if (result.hasErrors()) {
+            model.addAttribute("totalCartItems", shoppingCartService.getCount());
+            return new ModelAndView("/site/editProfile", model);
+        }
+        Customer c = customerRepository.FindByEmail(principal.getName()).get();
+        if (!photo.getOriginalFilename().equals("")) {
+            upload(photo, "uploads/customers");
+            c.setImage(photo.getOriginalFilename());
+        }
+        c.setName(dto.getName());
+        c.setGender(dto.isGender());
+        c.setPhone(dto.getPhone());
+        c.setAddress(dto.getAddress());
+
+        customerRepository.save(c);
+
+        return new ModelAndView("forward:/customer/info");
+    }
+
+    @RequestMapping("/customer/info")
+    public ModelAndView info(ModelMap model, Principal principal) {
+
+        boolean isLogin = false;
+        if (principal != null) {
+            isLogin = true;
+        }
+        model.addAttribute("isLogin", isLogin);
+
+        if (principal != null) {
+            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
+            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
+            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
+                return new ModelAndView("forward:/admin/customers", model);
+            }
+        }
+
+        Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
+
+        Page<Order> listO0 = orderRepository.findByCustomerId(c.get().getCustomerId(), 0,
+                PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "order_id")));
+        model.addAttribute("orders0", listO0);
+
+        Page<Order> listO1 = orderRepository.findByCustomerId(c.get().getCustomerId(), 1,
+                PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "order_id")));
+        model.addAttribute("orders1", listO1);
+
+        Page<Order> listO2 = orderRepository.findByCustomerId(c.get().getCustomerId(), 2,
+                PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "order_id")));
+        model.addAttribute("orders2", listO2);
+
+        Page<Order> listO3 = orderRepository.findByCustomerId(c.get().getCustomerId(), 3,
+                PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "order_id")));
+        model.addAttribute("orders3", listO3);
+
+        model.addAttribute("user", c.get());
+        model.addAttribute("totalCartItems", shoppingCartService.getCount());
+        return new ModelAndView("/site/information", model);
+    }
+
+    /**
+     * CHECK OUT
+     * @param principal
+     * @return
+     */
+    @RequestMapping("/customer/checkout")
+    public ModelAndView checkout(Principal principal) {
+        Collection<CartItem> listItem = shoppingCartService.getCartItems();
+        Customer c = customerRepository.FindByEmail(principal.getName()).get();
+        Order o = new Order();
+        o.setAmount(shoppingCartService.getAmount());
+        o.setOrderDate(new Date());
+        o.setCustomer(c);
+        o.setStatus((short) 0);
+        orderRepository.save(o);
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(
+                "<h3>Xin chào " + c.getName() + "!</h3>\r\n" + "    <h4>Bạn có 1 đơn hàng từ KeyBoardShop</h4>\r\n"
+                        + "    <table style=\"border: 1px solid gray;\">\r\n"
+                        + "        <tr style=\"width: 100%; border: 1px solid gray;\">\r\n"
+                        + "            <th style=\"border: 1px solid gray;\">STT</th>\r\n"
+                        + "            <th style=\"border: 1px solid gray;\">Tên sản phẩm</th>\r\n"
+                        + "            <th style=\"border: 1px solid gray;\">Số lượng</th>\r\n"
+                        + "            <th style=\"border: 1px solid gray;\">Đơn giá</th>\r\n" + "        </tr>");
+//		Set<OrderDetail> set = null;
+        for (CartItem i : listItem) {
+            Optional<Product> opt = productRepository.findById(i.getProductId());
+            if(opt.isPresent()) {
+                Product p = opt.get();
+                OrderDetail od = new OrderDetail();
+                od.setQuantity(i.getQuantity());
+                od.setUnitPrice(i.getPrice());
+                od.setProduct(p);
+                od.setOrder(o);
+                orderDetailRepository.save(od);
+            }
+        }
+        sendMailAction(o, "Bạn đã đặt thành công 1 đơn hàng từ KeyBoard Shop!", "Chúng tôi sẽ sớm giao hàng cho bạn!",
+                "Thông báo đặt hàng thành công!");
+
+        shoppingCartService.clear();
+        return new ModelAndView("forward:/customer/info");
+    }
+
     //********************PRIVATE METHOD***********************//
     // check email
     private boolean checkEmail(String email) {
@@ -196,5 +346,58 @@ public class CustomerSiteController {
         return true;
     }
 
+    // save file
+
+    /**
+     * UPLOAD
+     * @param file
+     * @param dir
+     * @throws IOException
+     */
+    private void upload(MultipartFile file, String dir) throws IOException {
+        Path path = Paths.get(dir);
+        InputStream inputStream = file.getInputStream();
+        Files.copy(inputStream, path.resolve(file.getOriginalFilename()), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    /**
+     * SEND MAIL ACTION
+     * @param oReal
+     * @param status
+     * @param cmt
+     * @param notifycation
+     */
+    private void sendMailAction(Order oReal, String status, String cmt, String notifycation) {
+        List<OrderDetail> list = orderDetailRepository.findByOrderId(oReal.getOrderId());
+
+        StringBuilder stringBuilder = new StringBuilder();
+        int index = 0;
+        stringBuilder.append("<h3>Xin chào " + oReal.getCustomer().getName() + "!</h3>\r\n" + "    <h4>" + status
+                + "</h4>\r\n" + "    <table style=\"border: 1px solid gray;\">\r\n"
+                + "        <tr style=\"width: 100%; border: 1px solid gray;\">\r\n"
+                + "            <th style=\"border: 1px solid gray;\">STT</th>\r\n"
+                + "            <th style=\"border: 1px solid gray;\">Tên sản phẩm</th>\r\n"
+                + "            <th style=\"border: 1px solid gray;\">Số lượng</th>\r\n"
+                + "            <th style=\"border: 1px solid gray;\">Đơn giá</th>\r\n" + "        </tr>");
+        for (OrderDetail oD : list) {
+            index++;
+            stringBuilder.append("<tr>\r\n" + "            <td style=\"border: 1px solid gray;\">" + index + "</td>\r\n"
+                    + "            <td style=\"border: 1px solid gray;\">" + oD.getProduct().getName() + "</td>\r\n"
+                    + "            <td style=\"border: 1px solid gray;\">" + oD.getQuantity() + "</td>\r\n"
+                    + "            <td style=\"border: 1px solid gray;\">" + format(String.valueOf(oD.getUnitPrice()))
+                    + "</td>\r\n" + "        </tr>");
+        }
+        stringBuilder.append("\r\n" + "    </table>\r\n" + "    <h3>Tổng tiền: "
+                + format(String.valueOf(oReal.getAmount())) + "</h3>\r\n" + "    <hr>\r\n" + "    <h5>" + cmt
+                + "</h5>\r\n" + "    <h5>Chúc bạn 1 ngày tốt lành!</h5>");
+
+        sendMailService.queue(oReal.getCustomer().getEmail().trim(), notifycation, stringBuilder.toString());
+    }
+    // format currency
+    private String format(String number) {
+        DecimalFormat formatter = new DecimalFormat("###,###,###.##");
+
+        return formatter.format(Double.valueOf(number)) + " VNĐ";
+    }
 
 }
