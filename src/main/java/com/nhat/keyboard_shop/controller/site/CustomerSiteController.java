@@ -39,7 +39,7 @@ public class CustomerSiteController {
     @Autowired
     UserRoleRepository userRoleRepository;
 
-
+    //******LOGIN - LOGOUT*******//
     @GetMapping("/login")
     public ModelAndView loginForm(ModelMap model, @RequestParam("error") Optional<String> error) {
         System.out.println("CustomerSiteController.loginForm");
@@ -55,6 +55,7 @@ public class CustomerSiteController {
         return "redirect:/home";
     }
 
+    //******REGISTER*******//
     @GetMapping("/register")
     public ModelAndView registerForm(ModelMap model) {
         model.addAttribute("customer", new CustomerDto());
@@ -109,6 +110,12 @@ public class CustomerSiteController {
         return new ModelAndView("/site/confirmOtpRegister", model);
     }
 
+
+    //******FORGOT PASSWORD*******//
+    @GetMapping("/forgotPassword")
+    public ModelAndView forgotFrom() {
+        return new ModelAndView("/site/forgotPassword");
+    }
     @PostMapping("/forgotPassword")
     public ModelAndView forgotPassword(ModelMap model, @RequestParam("email") String email) {
         List<Customer> listC = customerRepository.findAll();
@@ -144,6 +151,7 @@ public class CustomerSiteController {
         return new ModelAndView("/site/confirmOtp", model);
     }
 
+    //******CHANGE PASSWORD*******//
     @PostMapping("/changePassword")
     public ModelAndView changeForm(ModelMap model,
                                    @Valid @ModelAttribute("changePassword") ChangePassword changePassword, BindingResult result,

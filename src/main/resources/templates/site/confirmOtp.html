@@ -2,7 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-  <title>Xác thực tài khoản mới</title>
+  <title>Quên mật khẩu</title>
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport"
@@ -31,13 +31,8 @@
     <div class="alert alert-danger col-6 offset-3" role="alert" th:if="${error}" th:text="${error}"></div>
     <div class="col-6 offset-3"
          style="border: none; box-shadow: 0 0 2px gray; border-radius: 8px;">
-      <form th:action="@{/confirmOtpRegister}" class="p-3" method="post" th:object="${customer}">
-        <input type="text" hidden="hidden" th:field="*{email}" />
-        <input type="text" hidden="hidden" th:field="*{phone}" />
-        <input type="text" hidden="hidden" th:field="*{password}" />
-        <input type="text" hidden="hidden" th:field="*{gender}" />
-        <input type="text" hidden="hidden" th:field="*{address}" />
-        <input type="text" hidden="hidden" th:field="*{name}" />
+      <form th:action="@{/confirmOtp}" class="p-3" method="post">
+        <input type="text" hidden="hideen" name="email" th:value="${email}"/>
         <div class="form-group text-center">
           <label for="otp" style="font-weight: 700;">Hãy nhập mã
             OTP đã gửi đến Email của bạn</label> <input type="text" maxlength="6"
