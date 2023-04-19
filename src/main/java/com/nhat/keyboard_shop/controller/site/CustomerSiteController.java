@@ -334,6 +334,16 @@ public class CustomerSiteController {
         return new ModelAndView("forward:/customer/info");
     }
 
+
+
+    /**
+     * ERROR MAPPING
+     * @return
+     */
+    @RequestMapping("/403")
+    public String error() {
+        return "/site/error";
+    }
     //********************PRIVATE METHOD***********************//
     // check email
     private boolean checkEmail(String email) {
