@@ -334,6 +334,61 @@ public class CustomerSiteController {
         return new ModelAndView("forward:/customer/info");
     }
 
+    /**
+     * CART CANCEL
+     * @param model
+     * @param id
+     * @param principal
+     * @return
+     */
+    @RequestMapping("/customer/cancel/{id}")
+    public ModelAndView cancel(ModelMap model, @PathVariable("id") int id, Principal principal) {
+        Optional<Order> o = orderRepository.findById(id);
+        if (o.isEmpty()) {
+            return new ModelAndView("forward:/customer/info");
+        }
+        Order oReal = o.get();
+        oReal.setStatus((short) 3);
+        orderRepository.save(oReal);
+
+        sendMailAction(oReal, "Bạn đã huỷ 1 đơn hàng từ KeyBoard Shop!",
+                "Chúng tôi rất tiếc vì không làm hài lòng bạn!", "Thông báo huỷ đơn hàng thành công!");
+
+        return new ModelAndView("forward:/customer/info");
+    }
+
+    /**
+     * CART DETAIL
+     * @param model
+     * @param id
+     * @param principal
+     * @return
+     */
+    @RequestMapping("/customer/detail/{id}")
+    public ModelAndView detail(ModelMap model, @PathVariable("id") int id, Principal principal) {
+
+        boolean isLogin = false;
+        if (principal != null) {
+            isLogin = true;
+        }
+        model.addAttribute("isLogin", isLogin);
+
+        if (principal != null) {
+            Optional<Customer> c = customerRepository.FindByEmail(principal.getName());
+            Optional<UserRole> uRole = userRoleRepository.findByCustomerId(Long.valueOf(c.get().getCustomerId()));
+            if (uRole.get().getAppRole().getName().equals("ROLE_ADMIN")) {
+                return new ModelAndView("forward:/admin/customers", model);
+            }
+        }
+
+        List<OrderDetail> listO = orderDetailRepository.findByOrderId(id);
+
+        model.addAttribute("amount", orderRepository.findById(id).get().getAmount());
+        model.addAttribute("orderDetail", listO);
+        model.addAttribute("orderId", id);
+        model.addAttribute("totalCartItems", shoppingCartService.getCount());
+        return new ModelAndView("/site/detail", model);
+    }
 
 
     /**
