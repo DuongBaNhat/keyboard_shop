@@ -233,6 +233,61 @@ public class CustomerController {
 
     }
 
+
+    /**
+     * /admin/customers: EDIT
+     * @param model
+     * @param id
+     * @return
+     */
+    @RequestMapping("/edit/{id}")
+    public ModelAndView edit(ModelMap model, @PathVariable("id") int id) {
+
+        Optional<Customer> opt = customerRepository.findById(id);
+        if (opt.isPresent()) {
+            CustomerDto dto = new CustomerDto();
+            BeanUtils.copyProperties(opt.get(), dto);
+            dto.setEdit(true);
+            model.addAttribute("customer", dto);
+            model.addAttribute("photo", dto.getImage());
+            // set active front-end
+            model.addAttribute("menuC", "menu");
+            return new ModelAndView("/admin/addCustomer", model);
+        }
+
+        model.addAttribute("error", "Người dùng này không tồn tại!");
+        // set active front-end
+        model.addAttribute("menuC", "menu");
+        return new ModelAndView("forward:/admin/customers", model);
+    }
+
+    /**
+     * /admin/customers: DELETE
+     * @param model
+     * @param id
+     * @return
+     */
+    @RequestMapping("/delete/{id}")
+    public ModelAndView delete(ModelMap model, @PathVariable("id") int id) {
+
+        Optional<Customer> opt = customerRepository.findById(id);
+        if (opt.isPresent()) {
+//			customerRepository.deleteById(id);
+//			customerRepository.SetStatus(id);
+            Customer c = opt.get();
+            c.setStatus(false);
+            customerRepository.save(c);
+            model.addAttribute("message", "Xoá thành công!");
+        } else {
+            model.addAttribute("error", "Người dùng này không tồn tại!");
+        }
+
+        // set active front-end
+        model.addAttribute("menuC", "menu");
+        return new ModelAndView("forward:/admin/customers", model);
+    }
+
+
     //************PRIVATE METHOD**********//
     // check email
     private boolean checkEmail(String email) {
