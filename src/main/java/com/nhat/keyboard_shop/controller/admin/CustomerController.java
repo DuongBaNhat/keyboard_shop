@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -58,6 +59,87 @@ public class CustomerController {
         model.addAttribute("menuC", "menu");
         return new ModelAndView("/admin/manageCustomer", model);
     }
+
+    /**
+     * /admin/manageCustomer: Page
+     * @param model
+     * @param page
+     * @param name
+     * @param size
+     * @param filter
+     * @return
+     */
+    @RequestMapping("/page")
+    public ModelAndView page(ModelMap model, @RequestParam("page") Optional<Integer> page,
+                             @RequestParam("name") String name, @RequestParam("size") Optional<Integer> size,
+                             @RequestParam("filter") Optional<Integer> filter) {
+        int currentPage = page.orElse(0);
+        int pageSize = size.orElse(5);
+        int filterPage = filter.orElse(0);
+        if (name.equalsIgnoreCase("null")) {
+            name = "";
+        }
+        Pageable pageable = PageRequest.of(currentPage, pageSize);
+
+        if (filterPage == 0) {
+            pageable = PageRequest.of(currentPage, pageSize);
+        } else if (filterPage == 1) {
+            pageable = PageRequest.of(currentPage, pageSize, Sort.by(Sort.Direction.ASC, "name"));
+        } else if (filterPage == 2) {
+            pageable = PageRequest.of(currentPage, pageSize, Sort.by(Sort.Direction.DESC, "name"));
+        } else if (filterPage == 3) {
+            pageable = PageRequest.of(currentPage, pageSize, Sort.by(Sort.Direction.ASC, "registerDate"));
+        } else if (filterPage == 4) {
+            pageable = PageRequest.of(currentPage, pageSize, Sort.by(Sort.Direction.DESC, "registerDate"));
+        }
+
+        Page<Customer> list = customerRepository.findByNameContaining(name, pageable);
+
+        model.addAttribute("customers", list);
+        model.addAttribute("name", name);
+        model.addAttribute("filter", filterPage);
+        // set active front-end
+        model.addAttribute("menuC", "menu");
+        return new ModelAndView("/admin/manageCustomer", model);
+    }
+
+    /**
+     * /admin/manageCustomer: SEARCH
+     * @param model
+     * @param name
+     * @param size
+     * @param filter
+     * @return
+     */
+    @RequestMapping("/search")
+    public ModelAndView search(ModelMap model, @RequestParam("name") String name,
+                               @RequestParam("size") Optional<Integer> size, @RequestParam("filter") Optional<Integer> filter) {
+        int filterPage = filter.orElse(0);
+        int pageSize = size.orElse(5);
+        Pageable pageable = PageRequest.of(0, pageSize);
+
+        if (filterPage == 0) {
+            pageable = PageRequest.of(0, pageSize);
+        } else if (filterPage == 1) {
+            pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "name"));
+        } else if (filterPage == 2) {
+            pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "name"));
+        } else if (filterPage == 3) {
+            pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "registerDate"));
+        } else if (filterPage == 4) {
+            pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "registerDate"));
+        }
+
+        Page<Customer> list = customerRepository.findByNameContaining(name, pageable);
+
+        model.addAttribute("name", name);
+        model.addAttribute("filter", filterPage);
+        model.addAttribute("customers", list);
+        // set active front-end
+        model.addAttribute("menuC", "menu");
+        return new ModelAndView("/admin/manageCustomer", model);
+    }
+
 
     /**
      * /admin/addCustomer: GET - FORM INPUT
