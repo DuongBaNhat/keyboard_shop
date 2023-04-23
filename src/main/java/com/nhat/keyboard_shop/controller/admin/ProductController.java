@@ -1,9 +1,11 @@
 package com.nhat.keyboard_shop.controller.admin;
 
 import com.nhat.keyboard_shop.domain.entity.Category;
+import com.nhat.keyboard_shop.domain.entity.OrderDetail;
 import com.nhat.keyboard_shop.domain.entity.Product;
 import com.nhat.keyboard_shop.model.dto.ProductDto;
 import com.nhat.keyboard_shop.repository.CategoryRepository;
+import com.nhat.keyboard_shop.repository.OrderDetailRepository;
 import com.nhat.keyboard_shop.repository.ProductRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,10 @@ public class ProductController {
     ProductRepository productRepository;
     @Autowired
     CategoryRepository categoryRepository;
+    @Autowired
+    OrderDetailRepository orderDetailRepository;
+
+
 
 
     /**
@@ -237,6 +243,70 @@ public class ProductController {
             model.addAttribute("message", "Thêm thành công!");
         }
 
+        List<Category> listC = categoryRepository.findAll();
+        model.addAttribute("categories", listC);
+        // set active front-end
+        model.addAttribute("menuP", "menu");
+        return new ModelAndView("forward:/admin/products", model);
+    }
+
+    /**
+     * /admin/products: DELETE
+     * @param id
+     * @param model
+     * @return
+     */
+    @GetMapping("/delete/{id}")
+    public ModelAndView delete(@PathVariable("id") Long id, ModelMap model) {
+        Optional<Product> p = productRepository.findById(id);
+        if (p.isPresent()) {
+            List<OrderDetail> listOD = orderDetailRepository.findByProductId(id);
+            if (listOD.size() > 0) {
+                model.addAttribute("error", "Không thể xoá sản phẩm này!");
+            } else {
+                productRepository.deleteById(id);
+                model.addAttribute("message", "Xoá thành công!");
+            }
+        } else {
+            model.addAttribute("error", "Sản phẩm không tồn tại!");
+        }
+
+        List<Category> listC = categoryRepository.findAll();
+        model.addAttribute("categories", listC);
+        // set active front-end
+        model.addAttribute("menuP", "menu");
+        return new ModelAndView("forward:/admin/products", model);
+    }
+
+    /**
+     * /admin/products: EDIT
+     * @param id
+     * @param model
+     * @return
+     */
+    @GetMapping("/edit/{id}")
+    public ModelAndView edit(@PathVariable("id") Long id, ModelMap model) {
+        Optional<Product> p = productRepository.findById(id);
+        ProductDto dto = new ProductDto();
+        if (p.isPresent()) {
+            List<Category> categories = categoryRepository.findAll();
+            model.addAttribute("categories", categories);
+
+            BeanUtils.copyProperties(p.get(), dto);
+            dto.setEdit(true);
+            dto.setCategoryId(p.get().getCategory().getCategoryId());
+            model.addAttribute("product", dto);
+
+            model.addAttribute("photo", dto.getImage());
+
+            List<Category> listC = categoryRepository.findAll();
+            model.addAttribute("categories", listC);
+            // set active front-end
+            model.addAttribute("menuP", "menu");
+            return new ModelAndView("/admin/addProduct", model);
+        }
+
+        model.addAttribute("error", "Sản phẩm này không tồn tại!");
         List<Category> listC = categoryRepository.findAll();
         model.addAttribute("categories", listC);
         // set active front-end
