@@ -2,8 +2,10 @@ package com.nhat.keyboard_shop.controller.admin;
 
 import com.nhat.keyboard_shop.domain.entity.Category;
 import com.nhat.keyboard_shop.domain.entity.Product;
+import com.nhat.keyboard_shop.model.dto.ProductDto;
 import com.nhat.keyboard_shop.repository.CategoryRepository;
 import com.nhat.keyboard_shop.repository.ProductRepository;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -11,10 +13,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.validation.Valid;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -152,6 +163,93 @@ public class ProductController {
         // set active front-end
         model.addAttribute("menuP", "menu");
         return new ModelAndView("/admin/product", model);
+    }
+
+    /**
+     * /admin/addProduct: FORM
+     * @param model
+     * @return
+     */
+    @GetMapping("/add")
+    public ModelAndView add(ModelMap model) {
+        model.addAttribute("product", new ProductDto());
+        model.addAttribute("photo", "keyboard.png");
+        List<Category> categories = categoryRepository.findAll();
+        model.addAttribute("categories", categories);
+
+        List<Category> listC = categoryRepository.findAll();
+        model.addAttribute("categories", listC);
+        // set active front-end
+        model.addAttribute("menuP", "menu");
+        return new ModelAndView("/admin/addProduct", model);
+    }
+
+    /**
+     * /admin/addProduct: SAVE/UPDATE
+     * @param model
+     * @param dto
+     * @param result
+     * @param photo
+     * @param img
+     * @return
+     * @throws IOException
+     */
+    @PostMapping("/add")
+    public ModelAndView save(ModelMap model, @Valid @ModelAttribute("product") ProductDto dto,
+                             BindingResult result, @RequestParam("photo") MultipartFile photo,
+                             @RequestParam("imgP") String img) throws IOException {
+        List<Category> categories = categoryRepository.findAll();
+        model.addAttribute("categories", categories);
+        if (result.hasErrors()) {
+            if (dto.isEdit()) {
+                model.addAttribute("photo", img);
+                dto.setImage(img);
+            } else {
+                model.addAttribute("photo", "keyboard.png");
+            }
+            List<Category> listC = categoryRepository.findAll();
+            model.addAttribute("categories", listC);
+            // set active front-end
+            model.addAttribute("menuP", "menu");
+            return new ModelAndView("/admin/addProduct", model);
+        }
+        Product p = new Product();
+        BeanUtils.copyProperties(dto, p);
+        p.setCategory(new Category(dto.getCategoryId(),
+                categoryRepository.findById(dto.getCategoryId()).get().getName(), true, null));
+        p.setEnteredDate(new Date());
+
+        if (photo.getOriginalFilename().equals("")) {
+            if (!img.equals("")) {
+                p.setImage(img);
+            } else {
+                p.setImage("keyboard.png");
+            }
+        } else {
+            p.setImage(photo.getOriginalFilename());
+            upload(photo, "uploads/products/", p.getImage());
+        }
+
+        productRepository.save(p);
+        if (dto.isEdit()) {
+            model.addAttribute("message", "Sửa thành công!");
+        } else {
+            model.addAttribute("message", "Thêm thành công!");
+        }
+
+        List<Category> listC = categoryRepository.findAll();
+        model.addAttribute("categories", listC);
+        // set active front-end
+        model.addAttribute("menuP", "menu");
+        return new ModelAndView("forward:/admin/products", model);
+    }
+
+    //**********PRIVATE METHOD**********//
+    // save file
+    private void upload(MultipartFile file, String dir, String name) throws IOException {
+        Path path = Paths.get(dir);
+        InputStream inputStream = file.getInputStream();
+        Files.copy(inputStream, path.resolve(file.getOriginalFilename()), StandardCopyOption.REPLACE_EXISTING);
     }
 
 }
