@@ -42,6 +42,14 @@ public class CategoryController {
         return "/admin/category";
     }
 
+    /**
+     * PAGEABLE
+     * @param model
+     * @param page
+     * @param size
+     * @param name
+     * @return
+     */
     @GetMapping("/page")
     public String page(ModelMap model, @RequestParam("page") Optional<Integer> page,
                        @RequestParam("size") Optional<Integer> size,
@@ -63,5 +71,26 @@ public class CategoryController {
         return "/admin/category";
     }
 
+    /**
+     * SEARCH BY NAME CATEGORY
+     * @param model
+     * @param name
+     * @param size
+     * @return
+     */
+    @GetMapping("/search")
+    public String search(ModelMap model, @RequestParam(name = "name", required = false) String name,
+                         @RequestParam("size") Optional<Integer> size) {
+        int pageSize = size.orElse(5);
+        Pageable pageable = PageRequest.of(0, pageSize);
+        Page<Category> list = categoryRepository.findByNameContaining(name, pageable);
 
+        model.addAttribute("categories", list);
+        model.addAttribute("name", name);
+
+        //set activity front-end
+        model.addAttribute("menuCa", "menu");
+
+        return "/admin/category";
+    }
 }
