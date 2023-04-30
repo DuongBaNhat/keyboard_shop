@@ -161,6 +161,27 @@ public class CategoryController {
         return "/admin/addCategory";
     }
 
+    @GetMapping("/edit/{id}")
+    public ModelAndView edit(ModelMap model, @PathVariable("id") Long id) {
+        //set activity front-end
+        model.addAttribute("menuCa", "menu");
+
+        Optional<Category> categoryOpt = categoryRepository.findById(id);
+        CategoryDto dto = new CategoryDto();
+        if(categoryOpt.isPresent()) {
+            Category category = categoryOpt.get();
+            BeanUtils.copyProperties(category, dto);
+            dto.setEdit(true);
+
+            model.addAttribute("category", dto);
+            return new ModelAndView("admin/addCategory", model);
+        }
+
+        model.addAttribute("error", "Không tồn tại thương hệu này !");
+        return  new ModelAndView("forward:/admin/categories/add", model);
+    }
+
+
     //************PRIVATE METHOD*******************//
 
     /**
@@ -177,5 +198,8 @@ public class CategoryController {
         }
         return true;
     }
+
+
+
 
 }
