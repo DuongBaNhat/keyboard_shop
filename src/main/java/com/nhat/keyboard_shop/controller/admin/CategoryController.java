@@ -1,8 +1,10 @@
 package com.nhat.keyboard_shop.controller.admin;
 
 import com.nhat.keyboard_shop.domain.entity.Category;
+import com.nhat.keyboard_shop.domain.entity.Product;
 import com.nhat.keyboard_shop.model.dto.CategoryDto;
 import com.nhat.keyboard_shop.repository.CategoryRepository;
+import com.nhat.keyboard_shop.repository.ProductRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -24,6 +26,8 @@ public class CategoryController {
 
     @Autowired
     private CategoryRepository categoryRepository;
+    @Autowired
+    private ProductRepository productRepository;
 
     /**
      * LIST CATEGORY
@@ -161,6 +165,12 @@ public class CategoryController {
         return "/admin/addCategory";
     }
 
+    /**
+     * EDIT CATEGORY
+     * @param model
+     * @param id
+     * @return
+     */
     @GetMapping("/edit/{id}")
     public ModelAndView edit(ModelMap model, @PathVariable("id") Long id) {
         //set activity front-end
@@ -181,6 +191,27 @@ public class CategoryController {
         return  new ModelAndView("forward:/admin/categories/add", model);
     }
 
+    @GetMapping("/delete/{id}")
+    public ModelAndView delete(ModelMap model, @PathVariable("id") Long id) {
+        //set activity front-end
+        model.addAttribute("menuCa", "menu");
+
+        Optional<Category> categoryOpt = categoryRepository.findById(id);
+        if(categoryOpt.isPresent()) {
+            Page<Product> products = productRepository.findAllProductByCategoryId(id, PageRequest.of(0, 100));
+            if(products.getTotalElements() > 0) {
+                model.addAttribute("error", "Sản phẩm của thương hiệu này vẫn còn, xin hãay xóa sản phẩm đó trước ! ");
+            } else  {
+                categoryRepository.delete(categoryOpt.get());
+                model.addAttribute("message", "Xóa thành công !");
+            }
+        } else  {
+            model.addAttribute("error", "Thương hiệu này không tồn tại");
+        }
+
+
+        return new ModelAndView("forward:/admin/categories", model);
+    }
 
     //************PRIVATE METHOD*******************//
 
