@@ -88,6 +88,21 @@ public class OrderController {
         return new ModelAndView(view, model);
     }
 
+    @RequestMapping("/cancel/{order-id}")
+    public ModelAndView cancel(ModelMap model, @PathVariable("order-id") int id) {
+        Optional<Order> orderOptional = orderRepository.findById(id);
+        if(orderOptional.isEmpty()) {
+            return new ModelAndView("forward:/admin/orders", model);
+        }
+
+        Order order = orderOptional.get();
+        order.setStatus((short) 3);
+        orderRepository.save(order);
+
+        sendMailAction(order, "Bạn đã bị huỷ 1 đơn hàng từ KeyBoard Shop!",
+                "Chúng tôi rất tiếc!", "Thông báo huỷ đơn hàng!");
+        return new ModelAndView("forward:/admin/orders", model);
+    }
 
     //*** private method ***//
 
