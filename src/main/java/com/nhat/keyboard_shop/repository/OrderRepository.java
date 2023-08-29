@@ -15,5 +15,5 @@ public interface OrderRepository  extends JpaRepository<Order, Integer> {
     @Query(value = "select * from orders where status = ?", nativeQuery = true)
     Page<Order> findByStatus(int status, Pageable pageable);
 
-    Page<Order> findByorderId(int id, Pageable pageable);
+    Page<Order> findByOrderId(int id, Pageable pageable);
 }
