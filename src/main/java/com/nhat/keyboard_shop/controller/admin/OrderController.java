@@ -14,6 +14,7 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.text.DecimalFormat;
@@ -103,6 +104,28 @@ public class OrderController {
                 "Chúng tôi rất tiếc!", "Thông báo huỷ đơn hàng!");
         return new ModelAndView("forward:/admin/orders", model);
     }
+
+    @RequestMapping("/search")
+    public ModelAndView search(ModelMap model, @RequestParam("id") String id) {
+        Page<Order> listO = null;
+        if(id == null || id.isEmpty() || id.equalsIgnoreCase("null")) {
+            listO = orderRepository.findAll(PageRequest.of(
+                    0, 5, Sort.by(Sort.Direction.DESC, "orderId"))
+            );
+        } else {
+            listO = orderRepository.findByOrderId(
+                    Integer.parseInt(id), PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "orderId"))
+            );
+        }
+        model.addAttribute("id", id);
+        model.addAttribute("orders", listO);
+
+        //set active front-end
+        model.addAttribute("menuO", "menu");
+        return new ModelAndView("/admin/order");
+    }
+
+
 
     //*** private method ***//
 
