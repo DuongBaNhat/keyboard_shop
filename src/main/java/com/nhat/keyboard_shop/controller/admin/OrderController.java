@@ -8,6 +8,7 @@ import com.nhat.keyboard_shop.service.SendMailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -125,7 +126,49 @@ public class OrderController {
         return new ModelAndView("/admin/order");
     }
 
+    /**
+     * filter, page size, current page
+     * @param model
+     * @param page
+     * @param size
+     * @param filter
+     * @return
+     */
+    @RequestMapping("/page")
+    public ModelAndView page(ModelMap model, @RequestParam("page") Optional<Integer> page,
+                             @RequestParam("size") Optional<Integer> size,
+                             @RequestParam("filter") Optional<Integer> filter) {
+        int currentPage = page.orElse(0);
+        int pageSize = size.orElse(5);
+        int filterPage = filter.orElse(0);
 
+        Pageable pageable = PageRequest.of(currentPage, pageSize, Sort.by(Sort.Direction.DESC, "order_id"));
+        Page<Order> listO = null;
+        if(filterPage == 0) {
+            pageable = PageRequest.of(currentPage, pageSize, Sort.by(Sort.Direction.DESC, "orderId"));
+            listO = orderRepository.findAll(pageable);
+        } else if(filterPage == 1) {
+            listO = orderRepository.findByStatus(0, pageable);
+        } else if(filterPage == 2) {
+            listO = orderRepository.findByStatus(1, pageable);
+        } else if (filterPage == 3) {
+            listO = orderRepository.findByStatus(2, pageable);
+        } else if (filterPage == 4) {
+            listO = orderRepository.findByStatus(3, pageable);
+        } else if (filterPage == 5) {
+            pageable = PageRequest.of(currentPage, pageSize, Sort.by(Sort.Direction.DESC, "amount"));
+            listO = orderRepository.findAll(pageable);
+        }
+
+        model.addAttribute("filter", filterPage);
+        model.addAttribute("page", currentPage);
+        model.addAttribute("orders", listO);
+
+        //set active front-end
+        model.addAttribute("menuO", "menu");
+
+        return new ModelAndView("/admin/order");
+    }
 
     //*** private method ***//
 
