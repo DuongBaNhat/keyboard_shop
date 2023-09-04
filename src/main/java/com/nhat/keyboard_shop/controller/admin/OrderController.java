@@ -2,8 +2,10 @@ package com.nhat.keyboard_shop.controller.admin;
 
 import com.nhat.keyboard_shop.domain.entity.Order;
 import com.nhat.keyboard_shop.domain.entity.OrderDetail;
+import com.nhat.keyboard_shop.domain.entity.Product;
 import com.nhat.keyboard_shop.repository.OrderDetailRepository;
 import com.nhat.keyboard_shop.repository.OrderRepository;
+import com.nhat.keyboard_shop.repository.ProductRepository;
 import com.nhat.keyboard_shop.service.SendMailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -33,6 +35,8 @@ public class OrderController {
 
     @Autowired
     SendMailService sendMailService;
+    @Autowired
+    ProductRepository productRepository;
 
     /**
      * View list order
@@ -170,6 +174,36 @@ public class OrderController {
         return new ModelAndView("/admin/order");
     }
 
+    /**
+     * delivered
+     * @param model
+     * @param id
+     * @return view
+     */
+    @RequestMapping("/delivered/{order-id}")
+    public ModelAndView delivered(ModelMap model, @PathVariable("order-id") int id) {
+        Optional<Order> optionalOrder = orderRepository.findById(id);
+        if(optionalOrder.isEmpty()) {
+            return new ModelAndView("forward:/admin/orders", model);
+        }
+        Order order = optionalOrder.get();
+        order.setStatus((short) 2);
+        orderRepository.save(order);
+
+        Product product = null;
+        List<OrderDetail> orderDetails = orderDetailRepository.findByOrderId(id);
+        for(OrderDetail orderDetail : orderDetails) {
+            product = orderDetail.getProduct();
+            product.setQuantity(product.getQuantity() - orderDetail.getQuantity());
+            productRepository.save(product);
+        }
+
+        sendMailAction(order, "Bạn có 1 đơn hàng ở KeyBoard Shop đã thanh toán thành công!",
+                "Chúng tôi cám ơn bạn vì đã ủng hộ KeyBoard Shop!",
+                "Thông báo thanh toán thành công!");
+
+        return new ModelAndView("forward:/admin/orders", model);
+    }
     //*** private method ***//
 
     /**
