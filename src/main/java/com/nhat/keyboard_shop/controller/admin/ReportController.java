@@ -51,4 +51,19 @@ public class ReportController {
         model.addAttribute("menuR", "menu");
         return new ModelAndView("/admin/statistical-day");
     }
+
+    /**
+     * statistical by month
+     * @param model
+     * @return
+     */
+    @RequestMapping("/reports/statistical/month")
+    public ModelAndView statisticalByMonth(ModelMap model) {
+        List<Object[]> statistical = productRepository.getStatisticalByMonth();
+        model.addAttribute("statistical", statistical);
+
+        //set active front - end
+        model.addAttribute("menu", "menu");
+        return new ModelAndView("/admin/statistical-month");
+    }
 }
