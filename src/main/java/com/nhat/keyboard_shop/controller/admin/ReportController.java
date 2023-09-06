@@ -66,4 +66,14 @@ public class ReportController {
         model.addAttribute("menu", "menu");
         return new ModelAndView("/admin/statistical-month");
     }
+
+    @RequestMapping("/reports/statistical/year")
+    public ModelAndView statisticalByYear(ModelMap model) {
+        List<Object[]> statistical = productRepository.getStatisticalByYear();
+        model.addAttribute("statistical", statistical);
+
+        //set active front - end
+        model.addAttribute("menuR", "menu");
+        return new ModelAndView("/admin/statistical-year");
+    }
 }
