@@ -76,4 +76,40 @@ public class ReportController {
         model.addAttribute("menuR", "menu");
         return new ModelAndView("/admin/statistical-year");
     }
+
+    /**
+     * report
+     * @param model
+     * @param reports
+     * @return
+     */
+    @RequestMapping("/reports")
+    public ModelAndView report(ModelMap model, @RequestParam("reports") Optional<Integer> reports) {
+        String forward = "forward:/admin/reports";
+        int report = reports.orElse(0);
+        if(report == 0) {
+            forward += "/statistical";
+        } else if (report == 1) {
+            forward += "/best-selling-category";
+        } else if (report == 2) {
+            forward += "/best-selling-product";
+        } else if (report == 3) {
+            forward += "/best-buyer";
+        } else {
+            forward += "/best-selling-category";
+        }
+
+        model.addAttribute("report", report);
+        return new ModelAndView(forward, model);
+    }
+
+    @RequestMapping("/reports/best-selling-product")
+    public ModelAndView bestSellCategory(ModelMap model) {
+        List<Object[]> bestSellingProducts = productRepository.getBestSellingProduct();
+        model.addAttribute("bestSellingProducts", bestSellingProducts);
+
+        //set active front - end
+        model.addAttribute("menuR", "menu");
+        return new ModelAndView("/admin/best-selling-product");
+    }
 }
