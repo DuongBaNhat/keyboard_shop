@@ -104,7 +104,7 @@ public class ReportController {
     }
 
     @RequestMapping("/reports/best-selling-product")
-    public ModelAndView bestSellCategory(ModelMap model) {
+    public ModelAndView bestSellProduct(ModelMap model) {
         List<Object[]> bestSellingProducts = productRepository.getBestSellingProduct();
         model.addAttribute("bestSellingProducts", bestSellingProducts);
 
@@ -112,4 +112,16 @@ public class ReportController {
         model.addAttribute("menuR", "menu");
         return new ModelAndView("/admin/best-selling-product");
     }
+
+    @RequestMapping("/reports/best-selling-category")
+    public ModelAndView bestSellingCategory(ModelMap model) {
+        List<Object[]> bestSellingCateCategories = productRepository.getBestSellingCategory();
+        model.addAttribute("bestSellingCategories", bestSellingCateCategories);
+
+        //set active front - end
+        model.addAttribute("menuR", "menu");
+
+        return new ModelAndView("/admin/best-selling-category");
+    }
+
 }
